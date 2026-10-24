@@ -1,0 +1,7 @@
+:root{color-scheme:dark light;--bg:#0a1f3d;--card:#12335f;--text:#f7efd8;--muted:#b9c6da;--gold:#f2b84b}
+@media (prefers-color-scheme:light){:root{--bg:#f7efd8;--card:#fff;--text:#1b2a44;--muted:#4a5a78;--gold:#8a5a00}}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,sans-serif}
+main{max-width:720px;margin:0 auto;padding:24px 20px 64px}
+h1{font-family:Georgia,serif;margin:0 0 4px}h2{margin-top:32px;color:var(--gold)}
+a{color:var(--gold)}.muted{color:var(--muted)}
+nav a{margin-right:16px}
