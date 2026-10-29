@@ -1,14 +1,36 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SleeveX showcase</title><link rel="stylesheet" href="style.css">
+<title>SleeveX collector</title><link rel="stylesheet" href="style.css">
 <style>.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-top:20px}
 .grid img{width:100%;aspect-ratio:5/7;object-fit:cover;border-radius:8px;background:var(--card)}
-.n{font-size:12px;color:var(--muted)}.p{font-weight:700;color:var(--gold)}</style></head>
+.n{font-size:12px;color:var(--muted)}.p{font-weight:700;color:var(--gold)}
+.head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;margin-top:16px}
+.av{width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:var(--gold)}
+.counts{display:flex;gap:28px;margin-top:12px}.counts b{display:block;font-size:20px}
+.steps{margin-top:24px;padding:16px;border:1px solid var(--muted);border-radius:12px}
+.steps ol{margin:8px 0 0;padding-left:20px}.steps li{margin:4px 0}
+.btn{display:inline-block;margin-top:12px;padding:10px 16px;border-radius:999px;border:1px solid var(--muted);color:var(--muted);font-size:14px}
+</style></head>
 <body><main>
 <nav><a href="index.html">SleeveX</a></nav>
-<h1 id="t">Showcase</h1><div id="who" class="muted"></div>
-<div id="msg" class="muted">Loading…</div><div id="grid" class="grid"></div>
-<p class="muted" style="margin-top:32px;font-size:13px">Prices are estimates. Unofficial fan app, not affiliated with Bandai. Card images belong to their owners.</p>
+<div id="msg" class="muted">Loading…</div>
+<div id="profile" hidden>
+  <div class="head">
+    <div id="av"></div>
+    <h1 id="t" style="margin:8px 0 0"></h1>
+    <div id="who" class="muted"></div>
+    <div id="bio"></div>
+    <div class="counts"><div><b id="fol">0</b><span class="n">Followers</span></div><div><b id="fing">0</b><span class="n">Following</span></div><div><b id="cards">0</b><span class="n">Showcase cards</span></div></div>
+  </div>
+  <div class="steps">
+    <strong id="stepsT">Follow in SleeveX</strong>
+    <ol><li>Open SleeveX on your phone</li><li>On Home, find the Collectors card</li><li>Search <span id="at"></span> and tap Follow</li></ol>
+    <span class="btn" aria-disabled="true">Get the app: coming soon</span>
+  </div>
+  <h2 id="showT" style="margin-top:28px" hidden>Showcase</h2>
+  <div id="grid" class="grid"></div>
+</div>
+<p class="muted" style="margin-top:32px;font-size:13px">Prices are estimates. Unofficial fan app, not affiliated with Bandai or any card publisher. Card images belong to their owners. SleeveX by TJXLabs.</p>
 </main>
 <script>
 // The publishable key is safe in a public page: the database only lets visitors read what is public.
@@ -17,27 +39,42 @@ const KEY = 'sb_publishable_Rh7pgcCv90b7KAmfr9n9uA_Toz5OtCy';
 const H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' };
 const name = (new URLSearchParams(location.search).get('name') || '').toLowerCase();
 const msg = document.getElementById('msg');
+const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 (async () => {
-  if (!/^[a-z0-9_]{3,20}$/.test(name)) { msg.textContent = 'No showcase here.'; return; }
+  if (!/^[a-z0-9_]{3,20}$/.test(name)) { msg.textContent = 'No collector here.'; return; }
   try {
-    const r = await fetch(URL_ + '/rest/v1/rpc/get_showcase', { method: 'POST', headers: H, body: JSON.stringify({ name }) });
-    const s = await r.json();
-    if (!r.ok || !s) { msg.textContent = '@' + name + ' does not exist, or keeps their showcase private.'; return; }
-    document.title = s.title + ' · SleeveX';
-    document.getElementById('t').textContent = s.title;
-    document.getElementById('who').textContent = (s.display_name || s.username) + ' · @' + s.username;
-    const ids = s.product_ids || [];
-    if (!ids.length) { msg.textContent = 'No cards here yet.'; return; }
+    const r = await fetch(URL_ + '/rest/v1/rpc/get_collector', { method: 'POST', headers: H, body: JSON.stringify({ name }) });
+    const c = await r.json();
+    if (!r.ok || !c) { msg.textContent = '@' + name + ' does not exist, or is not available.'; return; }
+    const shown = c.display_name || c.username;
+    document.title = shown + ' (@' + c.username + ') · SleeveX';
+    $('t').textContent = shown;
+    $('who').textContent = '@' + c.username;
+    $('bio').textContent = c.bio || '';
+    $('at').textContent = '@' + c.username;
+    $('stepsT').textContent = 'Follow ' + shown + ' in SleeveX';
+    $('fol').textContent = c.followers || 0;
+    $('fing').textContent = c.following || 0;
+    const show = c.showcase;
+    const ids = show ? (show.product_ids || []) : [];
+    $('cards').textContent = ids.length;
+    $('av').outerHTML = c.avatar_url
+      ? '<img class="av" alt="" src="' + esc(URL_ + '/storage/v1/object/public/avatars/' + c.avatar_url) + '">'
+      : '<div class="av">' + esc(shown.charAt(0).toUpperCase()) + '</div>';
+    msg.remove();
+    $('profile').hidden = false;
+    if (!ids.length) return;
+    $('showT').hidden = false;
+    $('showT').textContent = show.title || 'Showcase';
     const pr = await fetch(URL_ + '/rest/v1/catalogue_products?select=id,name,number,image_url,price_usd_cents&id=in.(' + ids.join(',') + ')', { headers: H });
     const rows = await pr.json();
     const by = Object.fromEntries(rows.map(x => [x.id, x]));
-    msg.remove();
-    document.getElementById('grid').innerHTML = ids.filter(i => by[i]).map(i => {
+    $('grid').innerHTML = ids.filter(i => by[i]).map(i => {
       const p = by[i];
-      const price = s.show_prices && p.price_usd_cents != null ? '<div class="p">$' + (p.price_usd_cents / 100).toFixed(2) + '</div>' : '';
+      const price = show.show_prices && p.price_usd_cents != null ? '<div class="p">$' + (p.price_usd_cents / 100).toFixed(2) + '</div>' : '';
       return '<div>' + (p.image_url ? '<img loading="lazy" alt="' + esc(p.name) + '" src="' + esc(p.image_url) + '">' : '') + '<div class="n">' + esc(p.number || p.name) + '</div>' + price + '</div>';
     }).join('');
-  } catch (e) { msg.textContent = 'Could not load this showcase. Check your connection.'; }
+  } catch (e) { msg.textContent = 'Could not load this page. Check your connection.'; }
 })();
 </script></body></html>
